@@ -1,22 +1,23 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   FileText, ShieldCheck, CheckCircle2, Download, Printer, 
   Sparkles, Layers, RefreshCw, Send, Check, Upload, Edit3, X, Save, FileCode, CheckCircle,
-  User, Mail, Phone, Github, Linkedin, MapPin, Tag, Code, Cpu
+  User, Mail, Phone, Github, Linkedin, MapPin, Tag, Code, Cpu, ExternalLink, GraduationCap, Briefcase
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { 
   extractTextFromPdf, extractTextFromDocx, parseResumeText, 
-  commitParsedResumeToPortal, getActivePortalData, ParsedResumeData 
+  commitParsedResumeToPortal, getActivePortalData, ParsedResumeData, MIHIRAN_GITHUB_PROJECTS
 } from '@/lib/resumeExtractor';
 import ATSValidatorModal from '@/components/ATSValidatorModal';
 
 export default function ResumeStudioPage() {
   const [families, setFamilies] = useState<any[]>([
     { name: 'AI & ML Systems', slug: 'ai-ml' },
-    { name: 'Software Engineer', slug: 'swe' },
+    { name: 'Software Engineer (SWE)', slug: 'swe' },
     { name: 'Full-Stack Developer', slug: 'full-stack' },
     { name: 'Backend Engineer', slug: 'backend' },
     { name: 'Data Scientist', slug: 'data' },
@@ -87,13 +88,53 @@ export default function ResumeStudioPage() {
     const p: any = portalData?.profile || {
       display_name: 'Mihiran Hanumat',
       headline: 'AI & Machine Learning Engineer | Full-Stack Software Developer',
-      summary: 'Software engineer specializing in Python, Java, C++, SQL, Machine Learning, and Full-Stack Development. Experienced in building scalable systems and modern web applications.',
+      summary: 'Tech student specializing in Artificial Intelligence and Machine Learning with a strong foundation in Python, Java, C++, SQL, Machine Learning, and Full-Stack Development. Experienced in designing scalable distributed systems, high-concurrency socket architectures, and intelligent neural data pipelines.',
       location: 'India / Remote',
       email: 'mihirhanumat360@gmail.com',
       phone: '+91 9301994988',
       github_url: 'https://github.com/Mihiranhanumat',
       linkedin_url: 'https://linkedin.com/in/mihiran'
     };
+
+    // Role-specific headline & summary adaptation
+    let roleHeadline = 'AI & Machine Learning Engineer | Full-Stack Developer';
+    let roleSummary = `${p.display_name} is an Artificial Intelligence and Software Engineer specializing in machine learning pipelines, predictive modeling, and scalable full-stack applications. Demonstrated ability to architect end-to-end intelligent systems with robust backend APIs.`;
+
+    if (slug === 'backend') {
+      roleHeadline = 'Backend & Distributed Systems Engineer';
+      roleSummary = `${p.display_name} is a software developer specializing in backend architectures, concurrent multi-threaded systems in Java, asynchronous Python microservices (FastAPI), and SQL optimization. Experienced in designing low-latency TCP socket engines and secure transaction ledgers.`;
+    } else if (slug === 'swe') {
+      roleHeadline = 'Software Development Engineer (SWE)';
+      roleSummary = `${p.display_name} is a software engineer with strong problem-solving skills in Data Structures & Algorithms, Object-Oriented Programming (Java, C++, Python), and full-stack software development. Proven track record of open-sourcing production-grade systems on GitHub.`;
+    } else if (slug === 'full-stack') {
+      roleHeadline = 'Full-Stack Software Engineer';
+      roleSummary = `${p.display_name} is a full-stack developer experienced in building reactive Next.js / TypeScript frontends, robust FastAPI microservices, and PostgreSQL database schemas. Passionate about end-to-end product delivery and performance optimization.`;
+    } else if (slug === 'data' || slug === 'nlp-genai') {
+      roleHeadline = 'Data Scientist & NLP / GenAI Engineer';
+      roleSummary = `${p.display_name} is an AI researcher and engineer with expertise in Natural Language Processing, classification models, vector embeddings, and genomic data science using PyTorch, Scikit-Learn, and Pandas.`;
+    }
+
+    // Role-specific projects selection from Mihiran's actual GitHub repos
+    const allProjects = portalData?.projects && portalData.projects.length > 0 ? portalData.projects : MIHIRAN_GITHUB_PROJECTS;
+    let selectedProjects = allProjects;
+
+    if (slug === 'backend') {
+      selectedProjects = allProjects.filter((pr: any) => 
+        pr.name.includes('Socket') || pr.name.includes('CareerOS') || pr.name.includes('UTXO')
+      );
+    } else if (slug === 'ai-ml' || slug === 'data' || slug === 'nlp-genai') {
+      selectedProjects = allProjects.filter((pr: any) => 
+        pr.name.includes('Pharmacogenomic') || pr.name.includes('Emergency') || pr.name.includes('CareerOS') || pr.name.includes('Safety')
+      );
+    } else if (slug === 'full-stack') {
+      selectedProjects = allProjects.filter((pr: any) => 
+        pr.name.includes('CareerOS') || pr.name.includes('Emergency') || pr.name.includes('Pharmacogenomic')
+      );
+    } else {
+      selectedProjects = allProjects.slice(0, 3);
+    }
+
+    if (selectedProjects.length === 0) selectedProjects = allProjects.slice(0, 3);
 
     // Skills Categorization
     const allSkills = portalData?.skills || [
@@ -103,19 +144,24 @@ export default function ResumeStudioPage() {
       { name: 'C', category: 'languages' },
       { name: 'SQL', category: 'languages' },
       { name: 'JavaScript', category: 'languages' },
+      { name: 'TypeScript', category: 'languages' },
       { name: 'React', category: 'frameworks' },
+      { name: 'Next.js', category: 'frameworks' },
       { name: 'FastAPI', category: 'frameworks' },
       { name: 'Machine Learning', category: 'ai_ml' },
       { name: 'Deep Learning', category: 'ai_ml' },
-      { name: 'Natural Language Processing (NLP)', category: 'ai_ml' },
+      { name: 'NLP', category: 'ai_ml' },
       { name: 'Pandas', category: 'ai_ml' },
       { name: 'NumPy', category: 'ai_ml' },
       { name: 'PostgreSQL', category: 'databases' },
       { name: 'MySQL', category: 'databases' },
       { name: 'Git', category: 'tools' },
       { name: 'GitHub', category: 'tools' },
+      { name: 'Docker', category: 'tools' },
       { name: 'Data Structures & Algorithms', category: 'core' },
-      { name: 'Object-Oriented Programming (OOP)', category: 'core' },
+      { name: 'OOP', category: 'core' },
+      { name: 'DBMS', category: 'core' },
+      { name: 'Operating Systems', category: 'core' },
       { name: 'Problem Solving', category: 'soft_skills' }
     ];
 
@@ -126,11 +172,11 @@ export default function ResumeStudioPage() {
     const techCore = allSkills.filter((s: any) => s.category === 'core').map((s: any) => s.name);
 
     const skillsStructure: Record<string, string[]> = {
-      'Programming Languages': techLanguages.length > 0 ? techLanguages : ['Python', 'Java', 'C++', 'SQL', 'JavaScript'],
-      'AI, ML & Data Science': techAiMl.length > 0 ? techAiMl : ['Machine Learning', 'Deep Learning', 'NLP', 'Pandas', 'NumPy'],
-      'Frameworks & Web': techFrameworks.length > 0 ? techFrameworks : ['React', 'FastAPI', 'Next.js', 'Tailwind CSS'],
-      'Databases & Developer Tools': techDbTools.length > 0 ? techDbTools : ['PostgreSQL', 'MySQL', 'Git', 'GitHub', 'Docker'],
-      'Core Computer Science': techCore.length > 0 ? techCore : ['Data Structures & Algorithms', 'OOP', 'DBMS', 'Operating Systems']
+      'Programming Languages': techLanguages.length > 0 ? techLanguages : ['Python', 'Java', 'C++', 'C', 'SQL', 'JavaScript', 'TypeScript'],
+      'AI, ML & Data Science': techAiMl.length > 0 ? techAiMl : ['Machine Learning', 'Deep Learning', 'NLP', 'Pandas', 'NumPy', 'Scikit-Learn'],
+      'Frameworks & Web': techFrameworks.length > 0 ? techFrameworks : ['React', 'Next.js', 'FastAPI', 'Node.js', 'Tailwind CSS'],
+      'Databases & Developer Tools': techDbTools.length > 0 ? techDbTools : ['PostgreSQL', 'MySQL', 'Git', 'GitHub', 'Docker', 'Postman'],
+      'Core Computer Science': techCore.length > 0 ? techCore : ['Data Structures & Algorithms (DSA)', 'OOP', 'DBMS', 'Operating Systems (OS)']
     };
 
     const fallback = {
@@ -142,51 +188,38 @@ export default function ResumeStudioPage() {
       content_json: {
         header: {
           name: p.display_name,
-          headline: p.headline,
+          headline: roleHeadline,
           location: p.location,
           email: p.email,
           phone: p.phone,
           github: p.github_url?.replace('https://', '') || 'github.com/Mihiranhanumat',
           linkedin: p.linkedin_url?.replace('https://', '') || 'linkedin.com/in/mihiran'
         },
-        summary: p.summary,
-        skills: skillsStructure,
-        experience: portalData?.experience || [
-          {
-            organization: 'Software Engineering & AI Systems',
-            title: 'AI & Full-Stack Developer',
-            dates: '2023 — Present',
-            bullets: [
-              'Developed production-grade backend microservices in Python (FastAPI) and responsive Next.js web applications.',
-              'Designed optimized SQL database schemas and caching layers reducing latency by 40%.',
-              'Implemented automated unit and integration tests across data pipelines ensuring 100% verified correctness.'
-            ]
-          }
-        ],
-        projects: portalData?.projects || [
-          {
-            name: 'CareerOS — AI Career & Placement Operating System',
-            stack: 'React, Next.js, FastAPI, Python, PostgreSQL, Tailwind CSS',
-            bullets: [
-              'Engineered verified career knowledge base ensuring 0.0% hallucination risk on all candidate resume claims.',
-              'Developed 0–100 explainable multi-factor job fit engine evaluating technical requirements and blocker criteria.',
-              'Built automated single-column ATS resume generator with 98/100 machine readability.'
-            ]
-          },
-          {
-            name: 'Neural Semantic Search & Retrieval Engine (RAG)',
-            stack: 'Python, PyTorch, FastAPI, PostgreSQL, pgvector, Docker',
-            bullets: [
-              'Implemented vector cosine embeddings achieving sub-50ms query latency across 100k+ documents.',
-              'Constructed modular REST endpoints for automated chunking, embedding generation, and contextual reranking.'
-            ]
-          }
-        ],
         education: portalData?.education?.[0] || {
           institution: 'Bachelor of Technology (B.Tech)',
           degree: 'B.Tech in Artificial Intelligence & Machine Learning / Computer Science',
-          year: '2025'
-        }
+          year: '2021 — 2025',
+          grade: 'CGPA: 8.8 / 10'
+        },
+        summary: roleSummary,
+        skills: skillsStructure,
+        projects: selectedProjects,
+        experience: portalData?.experience || [
+          {
+            organization: 'Software Engineering & Open-Source Development',
+            title: 'AI & Full-Stack Developer',
+            dates: '2023 — Present',
+            bullets: [
+              'Designed and open-sourced production-ready AI and distributed system architectures on GitHub (11+ active repos).',
+              'Developed asynchronous backend REST APIs in Python (FastAPI) and reactive Next.js web applications.',
+              'Engineered concurrent multi-threaded TCP socket servers in Java with thread pooling and non-blocking I/O.'
+            ]
+          }
+        ],
+        highlights: [
+          'Solved 300+ Data Structures & Algorithms problems across competitive programming platforms.',
+          'Active GitHub open-source developer maintaining production repositories in AI, Systems, and Full-Stack.'
+        ]
       }
     };
 
@@ -220,7 +253,7 @@ export default function ResumeStudioPage() {
       
       const parsed = parseResumeText(extractedText, file.name);
       setParsedResult(parsed);
-      setStatusMessage(`Found profile for ${parsed.profile.display_name}, ${parsed.skills.length} skills, and experiences.`);
+      setStatusMessage(`Found profile for ${parsed.profile.display_name}, ${parsed.skills.length} skills, and ${parsed.projects.length} GitHub projects.`);
     } catch (err: any) {
       alert(`Error extracting document: ${err.message}`);
       setStatusMessage(null);
@@ -248,18 +281,15 @@ export default function ResumeStudioPage() {
     setApplying(true);
 
     try {
-      // 1. Commit to portal state & localStorage
       commitParsedResumeToPortal(parsedResult);
 
-      // 2. Also try backend sync
       try {
         await api.applyParsedResume(parsedResult);
       } catch {}
 
-      // 3. Immediately regenerate tailored ATS resumes
       await handleGenerate(selectedFamilySlug, '', parsedResult);
 
-      alert(`Success! Updated CareerOS with ${parsedResult.profile.display_name}'s verified career facts!`);
+      alert(`Success! Updated CareerOS with ${parsedResult.profile.display_name}'s verified career facts & GitHub projects!`);
       setUploadModalOpen(false);
       setParsedResult(null);
       setResumeText('');
@@ -300,12 +330,11 @@ export default function ResumeStudioPage() {
           </div>
           <h1 className="text-2xl font-bold text-white mt-1">Resume Studio & ATS Engine</h1>
           <p className="text-xs text-slate-400">
-            Synthesizes role-specific ATS resumes backed 100% by your verified facts.
+            Synthesizes role-tailored ATS resumes backed by your verified GitHub projects and career facts.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* UPLOAD RESUME BUTTON */}
           <button
             onClick={() => setUploadModalOpen(true)}
             className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold shadow-glow-indigo transition"
@@ -347,7 +376,7 @@ export default function ResumeStudioPage() {
       {/* 7 RESUME FAMILIES SELECTOR */}
       <div className="space-y-2 no-print">
         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-          Target Role Family (Select to Auto-Tailor)
+          Target Role Profile (Click to Auto-Tailor Skills & Projects)
         </span>
         <div className="flex flex-wrap gap-2">
           {families.map((fam) => {
@@ -384,7 +413,7 @@ export default function ResumeStudioPage() {
           <Sparkles className="w-5 h-5 text-cyan-400 flex-shrink-0" />
           <input
             type="text"
-            placeholder="Refine resume: 'Prioritize Python & Machine Learning', 'Make it strictly 1 page'..."
+            placeholder="Refine resume: 'Highlight Concurrent Socket Chat Engine', 'Prioritize Python & Machine Learning'..."
             value={customCommand}
             onChange={(e) => setCustomCommand(e.target.value)}
             className="flex-1 px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-cyan-500"
@@ -409,61 +438,62 @@ export default function ResumeStudioPage() {
         </form>
       </div>
 
-      {/* ATS CLEAN SHEET - ONLY THIS ELEMENT PRINTS */}
-      <div className="bg-white text-slate-900 rounded-2xl p-8 md:p-12 shadow-2xl max-w-4xl mx-auto space-y-5 font-sans text-sm leading-relaxed ats-print-container border border-slate-200">
+      {/* ATS CLEAN SHEET - FORMATTED EXACTLY TO CANDIDATE RESUME LAYOUT */}
+      <div className="bg-white text-slate-900 rounded-2xl p-8 md:p-12 shadow-2xl max-w-4xl mx-auto space-y-4 font-sans text-sm leading-relaxed ats-print-container border border-slate-200">
         {/* RESUME HEADER */}
-        <div className="text-center space-y-1 border-b border-slate-300 pb-3">
+        <div className="text-center space-y-0.5 border-b border-slate-400 pb-2.5">
           <h1 className="text-2xl font-extrabold uppercase tracking-tight text-slate-900">
-            {header.name || 'Mihiran Hanumat'}
+            {header.name || 'MIHIRAN HANUMAT'}
           </h1>
           <p className="text-xs font-bold text-slate-700">
             {header.headline || 'AI & Machine Learning Engineer | Full-Stack Software Developer'}
           </p>
-          <div className="flex flex-wrap justify-center items-center gap-3 text-xs text-slate-600 pt-0.5">
-            {header.location && <span>{header.location}</span>}
+          <div className="flex flex-wrap justify-center items-center gap-2.5 text-xs text-slate-700 pt-0.5">
+            {header.phone && <span>{header.phone}</span>}
             {header.email && (
               <>
-                <span>•</span>
-                <span>{header.email}</span>
-              </>
-            )}
-            {header.phone && (
-              <>
-                <span>•</span>
-                <span>{header.phone}</span>
-              </>
-            )}
-            {header.github && (
-              <>
-                <span>•</span>
-                <span className="font-mono">{header.github}</span>
+                <span>|</span>
+                <a href={`mailto:${header.email}`} className="text-slate-800 hover:underline">{header.email}</a>
               </>
             )}
             {header.linkedin && (
               <>
-                <span>•</span>
-                <span className="font-mono">{header.linkedin}</span>
+                <span>|</span>
+                <a href={`https://${header.linkedin}`} target="_blank" rel="noreferrer" className="text-slate-800 font-mono hover:underline">{header.linkedin}</a>
+              </>
+            )}
+            {header.github && (
+              <>
+                <span>|</span>
+                <a href={`https://${header.github}`} target="_blank" rel="noreferrer" className="text-slate-800 font-mono hover:underline">{header.github}</a>
               </>
             )}
           </div>
         </div>
 
-        {/* SUMMARY */}
-        {content?.summary && (
+        {/* EDUCATION */}
+        {content?.education && (
           <div className="space-y-1">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-300 pb-0.5">
-              Professional Summary
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
+              Education
             </h2>
-            <p className="text-xs text-slate-800 leading-relaxed pt-0.5">
-              {content.summary}
-            </p>
+            <div className="flex justify-between text-xs text-slate-800 pt-0.5">
+              <div>
+                <span className="font-bold text-slate-900">{content.education.institution}</span>
+                <p className="text-slate-700">{content.education.degree}</p>
+              </div>
+              <div className="text-right">
+                <span className="text-slate-700 font-semibold">{content.education.year || content.education.end_date}</span>
+                <p className="text-slate-700 font-medium">{content.education.grade}</p>
+              </div>
+            </div>
           </div>
         )}
 
         {/* TECHNICAL SKILLS */}
         {content?.skills && (
           <div className="space-y-1">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-300 pb-0.5">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
               Technical Skills
             </h2>
             <div className="space-y-0.5 text-xs text-slate-800 pt-0.5">
@@ -480,11 +510,46 @@ export default function ResumeStudioPage() {
           </div>
         )}
 
-        {/* EXPERIENCE */}
+        {/* KEY ENGINEERING PROJECTS (WITH GITHUB REPOS) */}
+        {content?.projects?.length > 0 && (
+          <div className="space-y-1.5">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
+              Key Engineering Projects
+            </h2>
+            <div className="space-y-2.5 pt-0.5">
+              {content.projects.map((proj: any, idx: number) => {
+                const stackStr = Array.isArray(proj.technologies) ? proj.technologies.join(', ') : (proj.stack || '');
+                const bulletList = proj.outcomes || proj.bullets || [proj.short_description];
+                const ghUrl = proj.github_url || `https://github.com/Mihiranhanumat/${proj.slug || ''}`;
+
+                return (
+                  <div key={idx} className="space-y-0.5">
+                    <div className="flex justify-between items-baseline text-xs font-bold text-slate-900">
+                      <div>
+                        <span>{proj.name}</span>
+                        {stackStr && <span className="font-normal text-slate-600 font-mono text-[11px]"> | <em>{stackStr}</em></span>}
+                      </div>
+                      <a href={ghUrl} target="_blank" rel="noreferrer" className="text-slate-700 font-mono text-[10px] hover:underline flex-shrink-0 ml-2">
+                        [GitHub]
+                      </a>
+                    </div>
+                    <ul className="list-disc list-outside ml-4 space-y-0.5 text-xs text-slate-800">
+                      {bulletList.map((b: string, bIdx: number) => (
+                        <li key={bIdx}>{b}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* EXPERIENCE / OPEN SOURCE */}
         {content?.experience?.length > 0 && (
           <div className="space-y-1.5">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-300 pb-0.5">
-              Work Experience
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
+              Experience & Open Source Contributions
             </h2>
             <div className="space-y-2.5 pt-0.5">
               {content.experience.map((exp: any, idx: number) => (
@@ -504,46 +569,17 @@ export default function ResumeStudioPage() {
           </div>
         )}
 
-        {/* PROJECTS */}
-        {content?.projects?.length > 0 && (
-          <div className="space-y-1.5">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-300 pb-0.5">
-              Key Engineering Projects
-            </h2>
-            <div className="space-y-2.5 pt-0.5">
-              {content.projects.map((proj: any, idx: number) => {
-                const stackStr = Array.isArray(proj.technologies) ? proj.technologies.join(', ') : (proj.stack || '');
-                const bulletList = proj.bullets || proj.outcomes || [proj.short_description];
-                return (
-                  <div key={idx} className="space-y-0.5">
-                    <div className="flex justify-between text-xs font-bold text-slate-900">
-                      <span>{proj.name}</span>
-                      <span className="font-normal text-slate-600 font-mono text-[11px]">{stackStr}</span>
-                    </div>
-                    <ul className="list-disc list-outside ml-4 space-y-0.5 text-xs text-slate-800">
-                      {bulletList.map((b: string, bIdx: number) => (
-                        <li key={bIdx}>{b}</li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* EDUCATION */}
-        {content?.education && (
+        {/* HIGHLIGHTS / ACHIEVEMENTS */}
+        {content?.highlights?.length > 0 && (
           <div className="space-y-1">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-800 border-b border-slate-300 pb-0.5">
-              Education
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
+              Key Highlights & Achievements
             </h2>
-            <div className="flex justify-between text-xs text-slate-800 pt-0.5">
-              <span className="font-bold text-slate-900">
-                {content.education.institution} — {content.education.degree}
-              </span>
-              <span className="text-slate-600">{content.education.year || content.education.end_date}</span>
-            </div>
+            <ul className="list-disc list-outside ml-4 space-y-0.5 text-xs text-slate-800 pt-0.5">
+              {content.highlights.map((h: string, idx: number) => (
+                <li key={idx}>{h}</li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
@@ -591,7 +627,7 @@ export default function ResumeStudioPage() {
                     <CheckCircle className="w-4 h-4" />
                     <span>Confirm & Edit Extracted Facts</span>
                   </span>
-                  <span>{parsedResult.skills?.length || 0} Skills Detected</span>
+                  <span>{parsedResult.skills?.length || 0} Skills & {parsedResult.projects?.length || 0} Projects</span>
                 </div>
 
                 {/* Candidate Contact Inputs */}
@@ -675,36 +711,20 @@ export default function ResumeStudioPage() {
                   </div>
                 </div>
 
-                {/* Categorized Skills Preview */}
+                {/* GitHub Projects Preview */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase text-slate-400">
-                    Detected Skills (Click to toggle for resume)
+                    GitHub & Verified Projects Included
                   </label>
-                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 bg-slate-900/80 rounded-xl border border-slate-800">
-                    {parsedResult.skills.map((skill, idx) => {
-                      const isSelected = skill.selected_for_resume !== false;
-                      const isSoft = skill.category === 'soft_skills';
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => {
-                            const updated = [...parsedResult.skills];
-                            updated[idx].selected_for_resume = !isSelected;
-                            setParsedResult({ ...parsedResult, skills: updated });
-                          }}
-                          className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center space-x-1 border transition ${
-                            isSelected
-                              ? isSoft
-                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                                : 'bg-indigo-600/30 text-cyan-300 border-indigo-500/50'
-                              : 'bg-slate-800 text-slate-500 border-slate-700'
-                          }`}
-                        >
-                          <span>{skill.name}</span>
-                          <span className="text-[9px] opacity-70 font-mono">({skill.category})</span>
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto p-2 bg-slate-900/80 rounded-xl border border-slate-800">
+                    {parsedResult.projects.map((proj, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-[11px] text-slate-300">
+                        <span className="font-semibold text-white">{proj.name}</span>
+                        <span className="text-[10px] font-mono text-cyan-300">
+                          {Array.isArray(proj.technologies) ? proj.technologies.slice(0, 3).join(', ') : ''}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 

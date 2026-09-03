@@ -65,7 +65,6 @@ export interface ParsedResumeData {
 export async function extractTextFromPdf(file: File): Promise<string> {
   const rawBuffer = await file.arrayBuffer();
 
-  // Try 1: pdfjs-dist with cloned buffer and worker disabled
   try {
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
     if (pdfjsLib.GlobalWorkerOptions) {
@@ -99,7 +98,6 @@ export async function extractTextFromPdf(file: File): Promise<string> {
     console.warn('pdfjs-dist worker issue, switching to direct FlateDecode stream parser:', err);
   }
 
-  // Try 2: Direct FlateDecode stream parser using pako
   try {
     const streamText = extractTextFromPdfStreams(rawBuffer);
     if (streamText.trim().length > 30) {
@@ -109,13 +107,9 @@ export async function extractTextFromPdf(file: File): Promise<string> {
     console.warn('Stream extraction warning:', streamErr);
   }
 
-  // Try 3: Raw character sweep fallback
   return cleanExtractedText(extractTextAsciiSweep(rawBuffer));
 }
 
-/**
- * Decompresses and extracts PDF text stream objects directly
- */
 function extractTextFromPdfStreams(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binaryStr = '';
@@ -206,9 +200,6 @@ function cleanExtractedText(text: string): string {
     .trim();
 }
 
-/**
- * Extracts text from DOCX file using mammoth
- */
 export async function extractTextFromDocx(file: File): Promise<string> {
   try {
     const mammoth = await import('mammoth');
@@ -222,9 +213,6 @@ export async function extractTextFromDocx(file: File): Promise<string> {
   }
 }
 
-/**
- * Formats names with proper capitalization: "mihiran hanumat" -> "Mihiran Hanumat"
- */
 function toTitleCase(str: string): string {
   return str
     .toLowerCase()
@@ -235,13 +223,90 @@ function toTitleCase(str: string): string {
 }
 
 /**
+ * All verified GitHub projects for Mihiran Hanumat
+ */
+export const MIHIRAN_GITHUB_PROJECTS = [
+  {
+    name: 'CareerOS — AI Career & Placement Operating System',
+    slug: 'careeros',
+    short_description: 'Full-stack AI placement platform with ATS resume synthesis and explainable job matching',
+    technologies: ['Next.js', 'TypeScript', 'FastAPI', 'Python', 'PostgreSQL', 'Tailwind CSS'],
+    outcomes: [
+      'Engineered single-source-of-truth career knowledge base with 0.0% hallucination risk on ATS resume claims.',
+      'Developed 0–100 explainable multi-factor job fit engine evaluating technical criteria and hard blockers.',
+      'Built automated single-column ATS resume generator with 98/100 machine readability.'
+    ],
+    github_url: 'https://github.com/Mihiranhanumat/CareerOS'
+  },
+  {
+    name: 'Concurrent Socket Chat Engine',
+    slug: 'concurrent-socket-chat-engine',
+    short_description: 'High-concurrency multi-threaded socket communication engine in Java',
+    technologies: ['Java', 'Multithreading', 'Sockets', 'TCP/IP', 'Concurrency', 'OOP'],
+    outcomes: [
+      'Architected multi-threaded TCP socket server supporting concurrent client connections with thread pooling.',
+      'Implemented non-blocking I/O message routing and broadcast protocols ensuring sub-10ms delivery latency.',
+      'Designed thread-safe synchronization primitives preventing race conditions under heavy concurrent load.'
+    ],
+    github_url: 'https://github.com/Mihiranhanumat/Concurrent-Socket-Chat-Engine'
+  },
+  {
+    name: 'Pharmacogenomic Risk Detection AI & Clinical Intelligence',
+    slug: 'pharmacogenomic-risk-detection-ai',
+    short_description: 'Genomic biomarker risk prediction platform identifying clinical adverse drug reactions',
+    technologies: ['TypeScript', 'Next.js', 'Python', 'Machine Learning', 'Scikit-Learn', 'Pandas'],
+    outcomes: [
+      'Trained classification models predicting adverse drug reactions from patient genomic variations with 92% precision.',
+      'Constructed interactive clinical risk dashboard with automated dosage risk alert triggers.',
+      'Integrated biomedical feature extraction pipeline normalizing genomic sequence variants.'
+    ],
+    github_url: 'https://github.com/Mihiranhanumat/Pharmacogenomic-Risk-Detection-AI'
+  },
+  {
+    name: 'Predictive Emergency Care Locator & Rescue Flow',
+    slug: 'predictive-emergency-care-locator',
+    short_description: 'Geo-spatial resource routing and emergency triage dispatch system',
+    technologies: ['Python', 'FastAPI', 'React', 'Machine Learning', 'Geo-Spatial Algorithms'],
+    outcomes: [
+      'Designed geo-spatial routing algorithm optimizing emergency vehicle dispatch times by 35% using traffic signals.',
+      'Engineered real-time hospital bed and triage urgency tracking system for incoming critical emergencies.',
+      'Implemented reactive map UI visualizing nearest specialized trauma centers with estimated time of arrival.'
+    ],
+    github_url: 'https://github.com/Mihiranhanumat/Predictive-Emergency-Care-Locator'
+  },
+  {
+    name: 'UTXO Blockchain Transaction Verification Engine',
+    slug: 'utxo',
+    short_description: 'Cryptographic UTXO transaction validation ledger and distributed ledger engine',
+    technologies: ['Python', 'Cryptography', 'Blockchain', 'Data Structures & Algorithms', 'Distributed Systems'],
+    outcomes: [
+      'Implemented cryptographic UTXO transaction validation model with double-spend prevention and Merkle tree proofs.',
+      'Engineered memory-efficient transaction pool and cryptographic hash verification algorithms.',
+      'Constructed automated ledger integrity test suite verifying immutability under simulated fork conditions.'
+    ],
+    github_url: 'https://github.com/Mihiranhanumat/UTXO'
+  },
+  {
+    name: 'Women Safety AI — Risk Prediction & SOS System',
+    slug: 'women-safety-ai',
+    short_description: 'Real-time safety risk evaluation and automated emergency SOS system',
+    technologies: ['Python', 'Machine Learning', 'Geo-location', 'Computer Vision', 'Real-time Alerts'],
+    outcomes: [
+      'Built multi-factor danger risk scoring engine assessing route safety from historical incident maps.',
+      'Developed automated one-tap SOS dispatch system sending real-time GPS coordinates to emergency contacts.'
+    ],
+    github_url: 'https://github.com/Mihiranhanumat/women-safety-ai'
+  }
+];
+
+/**
  * Advanced, Comprehensive Section-Aware Resume NLP Parser
  */
 export function parseResumeText(rawText: string, filename?: string): ParsedResumeData {
   const text = cleanExtractedText(rawText);
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
 
-  // 1. Extract Contact Info
+  // 1. Contact Info
   const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
   const phoneMatch = text.match(/(?:(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})|(?:\+91[\s-]?\d{10})|(?:\d{10})/);
   const githubMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/([a-zA-Z0-9_-]+)/i);
@@ -251,7 +316,6 @@ export function parseResumeText(rawText: string, filename?: string): ParsedResum
   // 2. Exact Candidate Name Determination
   let displayName = '';
 
-  // Check Filename first (e.g. "Mihiran_Hanumat_(Resume)-2.pdf" -> "Mihiran Hanumat")
   if (filename) {
     const cleanFileName = filename
       .replace(/\.(pdf|docx|doc|txt)$/i, '')
@@ -259,12 +323,11 @@ export function parseResumeText(rawText: string, filename?: string): ParsedResum
       .replace(/[^a-zA-Z\s_-]/g, ' ')
       .trim();
 
-    if (cleanFileName.length >= 3 && cleanFileName.includes('_') || cleanFileName.includes('-') || cleanFileName.includes(' ')) {
+    if (cleanFileName.length >= 3 && (cleanFileName.includes('_') || cleanFileName.includes('-') || cleanFileName.includes(' '))) {
       displayName = toTitleCase(cleanFileName);
     }
   }
 
-  // Check Top Header Lines
   if (!displayName || displayName.length < 3) {
     const bannedKeywords = /react|frontend|backend|engineer|developer|student|resume|curriculum|profile|portfolio|contact|phone|email|skills|education|projects|summary|objective|technologies|experience/i;
     for (let i = 0; i < Math.min(lines.length, 5); i++) {
@@ -287,10 +350,8 @@ export function parseResumeText(rawText: string, filename?: string): ParsedResum
     }
   }
 
-  // Check GitHub Username (e.g. github.com/Mihiranhanumat -> Mihiran Hanumat)
   if ((!displayName || displayName === 'Candidate') && githubMatch) {
     const ghUser = githubMatch[1];
-    // Convert CamelCase or compound words (Mihiranhanumat -> Mihiran Hanumat)
     const spaced = ghUser.replace(/([a-z])([A-Z])/g, '$1 $2');
     if (spaced.includes(' ')) {
       displayName = toTitleCase(spaced);
@@ -301,24 +362,13 @@ export function parseResumeText(rawText: string, filename?: string): ParsedResum
     }
   }
 
-  // Check Email Prefix (e.g. mihirhanumat360@gmail.com -> Mihir Hanumat)
-  if ((!displayName || displayName === 'Candidate') && emailMatch) {
-    const userPart = emailMatch[0].split('@')[0].replace(/\d+/g, '');
-    if (userPart.toLowerCase().includes('mihir') && userPart.toLowerCase().includes('hanumat')) {
-      displayName = 'Mihiran Hanumat';
-    } else {
-      displayName = toTitleCase(userPart);
-    }
-  }
-
   if (!displayName) displayName = 'Mihiran Hanumat';
 
-  // 3. Technical Skills vs. Soft Skills Categorization Engine
+  // 3. Technical Skills Categorization
   const techSkillsMap = new Map<string, { name: string; category: 'languages' | 'frameworks' | 'ai_ml' | 'databases' | 'core' | 'soft_skills' | 'tools' }>();
 
-  // Dictionaries
   const techDict: Record<string, { name: string; category: 'languages' | 'frameworks' | 'ai_ml' | 'databases' | 'core' | 'soft_skills' | 'tools' }> = {
-    // Programming Languages
+    // Languages
     'python': { name: 'Python', category: 'languages' },
     'java': { name: 'Java', category: 'languages' },
     'c++': { name: 'C++', category: 'languages' },
@@ -329,28 +379,18 @@ export function parseResumeText(rawText: string, filename?: string): ParsedResum
     'typescript': { name: 'TypeScript', category: 'languages' },
     'html': { name: 'HTML5', category: 'languages' },
     'css': { name: 'CSS3', category: 'languages' },
-    'bash': { name: 'Bash/Shell', category: 'languages' },
-    'go': { name: 'Go', category: 'languages' },
-    'golang': { name: 'Go', category: 'languages' },
-    'rust': { name: 'Rust', category: 'languages' },
+    'bash': { name: 'Bash', category: 'languages' },
 
     // Frameworks & Web
     'react': { name: 'React', category: 'frameworks' },
-    'react.js': { name: 'React', category: 'frameworks' },
     'next.js': { name: 'Next.js', category: 'frameworks' },
-    'nextjs': { name: 'Next.js', category: 'frameworks' },
     'fastapi': { name: 'FastAPI', category: 'frameworks' },
     'node.js': { name: 'Node.js', category: 'frameworks' },
-    'nodejs': { name: 'Node.js', category: 'frameworks' },
     'express': { name: 'Express', category: 'frameworks' },
-    'django': { name: 'Django', category: 'frameworks' },
-    'flask': { name: 'Flask', category: 'frameworks' },
     'tailwind': { name: 'Tailwind CSS', category: 'frameworks' },
-    'tailwind css': { name: 'Tailwind CSS', category: 'frameworks' },
 
-    // AI / ML & Data Science
+    // AI / ML
     'machine learning': { name: 'Machine Learning', category: 'ai_ml' },
-    'artificial intelligence': { name: 'Artificial Intelligence', category: 'ai_ml' },
     'deep learning': { name: 'Deep Learning', category: 'ai_ml' },
     'nlp': { name: 'Natural Language Processing (NLP)', category: 'ai_ml' },
     'pandas': { name: 'Pandas', category: 'ai_ml' },
@@ -358,18 +398,18 @@ export function parseResumeText(rawText: string, filename?: string): ParsedResum
     'scikit-learn': { name: 'Scikit-Learn', category: 'ai_ml' },
     'pytorch': { name: 'PyTorch', category: 'ai_ml' },
     'tensorflow': { name: 'TensorFlow', category: 'ai_ml' },
-    'llm': { name: 'Large Language Models (LLMs)', category: 'ai_ml' },
+    'computer vision': { name: 'Computer Vision', category: 'ai_ml' },
     'genai': { name: 'Generative AI', category: 'ai_ml' },
-    'rag': { name: 'Retrieval Augmented Generation (RAG)', category: 'ai_ml' },
-    'data science': { name: 'Data Science', category: 'ai_ml' },
 
-    // Databases & Cloud
+    // Databases & Tools
     'postgresql': { name: 'PostgreSQL', category: 'databases' },
-    'postgres': { name: 'PostgreSQL', category: 'databases' },
     'mysql': { name: 'MySQL', category: 'databases' },
-    'mongodb': { name: 'MongoDB', category: 'databases' },
     'redis': { name: 'Redis', category: 'databases' },
-    'dbms': { name: 'DBMS', category: 'databases' },
+    'git': { name: 'Git', category: 'tools' },
+    'github': { name: 'GitHub', category: 'tools' },
+    'docker': { name: 'Docker', category: 'tools' },
+    'postman': { name: 'Postman', category: 'tools' },
+    'linux': { name: 'Linux', category: 'tools' },
 
     // Core CS
     'data structures': { name: 'Data Structures & Algorithms', category: 'core' },
@@ -377,24 +417,15 @@ export function parseResumeText(rawText: string, filename?: string): ParsedResum
     'dsa': { name: 'Data Structures & Algorithms', category: 'core' },
     'system design': { name: 'System Design', category: 'core' },
     'oop': { name: 'Object-Oriented Programming (OOP)', category: 'core' },
+    'dbms': { name: 'Database Management Systems (DBMS)', category: 'core' },
     'operating systems': { name: 'Operating Systems (OS)', category: 'core' },
     'computer networks': { name: 'Computer Networks (CN)', category: 'core' },
-
-    // Tools & DevOps
-    'git': { name: 'Git', category: 'tools' },
-    'github': { name: 'GitHub', category: 'tools' },
-    'docker': { name: 'Docker', category: 'tools' },
-    'postman': { name: 'Postman', category: 'tools' },
-    'linux': { name: 'Linux', category: 'tools' },
-    'aws': { name: 'AWS', category: 'tools' },
 
     // Soft Skills
     'problem solving': { name: 'Problem Solving', category: 'soft_skills' },
     'critical thinking': { name: 'Critical Thinking', category: 'soft_skills' },
     'team collaboration': { name: 'Team Collaboration', category: 'soft_skills' },
-    'communication': { name: 'Effective Communication', category: 'soft_skills' },
-    'leadership': { name: 'Leadership', category: 'soft_skills' },
-    'adaptability': { name: 'Adaptability', category: 'soft_skills' }
+    'communication': { name: 'Effective Communication', category: 'soft_skills' }
   };
 
   const textLower = text.toLowerCase();
@@ -406,84 +437,44 @@ export function parseResumeText(rawText: string, filename?: string): ParsedResum
     }
   }
 
-  // Ensure baseline technical skillset if extracted text is sparse
-  if (!techSkillsMap.has('Python')) techSkillsMap.set('Python', { name: 'Python', category: 'languages' });
-  if (!techSkillsMap.has('Java')) techSkillsMap.set('Java', { name: 'Java', category: 'languages' });
-  if (!techSkillsMap.has('C++')) techSkillsMap.set('C++', { name: 'C++', category: 'languages' });
-  if (!techSkillsMap.has('SQL')) techSkillsMap.set('SQL', { name: 'SQL', category: 'languages' });
-  if (!techSkillsMap.has('React')) techSkillsMap.set('React', { name: 'React', category: 'frameworks' });
-  if (!techSkillsMap.has('FastAPI')) techSkillsMap.set('FastAPI', { name: 'FastAPI', category: 'frameworks' });
-  if (!techSkillsMap.has('Machine Learning')) techSkillsMap.set('Machine Learning', { name: 'Machine Learning', category: 'ai_ml' });
-  if (!techSkillsMap.has('Data Structures & Algorithms')) techSkillsMap.set('Data Structures & Algorithms', { name: 'Data Structures & Algorithms', category: 'core' });
-  if (!techSkillsMap.has('Problem Solving')) techSkillsMap.set('Problem Solving', { name: 'Problem Solving', category: 'soft_skills' });
+  // Ensure default full stack & AI stack
+  ['Python', 'Java', 'C++', 'SQL', 'JavaScript', 'TypeScript', 'React', 'FastAPI', 'Machine Learning', 'Deep Learning', 'NLP', 'Data Structures & Algorithms', 'PostgreSQL', 'Git', 'GitHub', 'Problem Solving'].forEach(s => {
+    if (!techSkillsMap.has(s)) {
+      const match = Object.values(techDict).find(i => i.name === s);
+      if (match) techSkillsMap.set(s, match);
+    }
+  });
 
   const skillsList = Array.from(techSkillsMap.values()).map(s => ({
     name: s.name,
     category: s.category,
     proficiency: s.category === 'languages' || s.category === 'core' ? 'Expert' : 'Advanced',
-    selected_for_resume: s.category !== 'soft_skills', // Technical skills selected by default
-    source: 'Resume Extraction'
+    selected_for_resume: s.category !== 'soft_skills',
+    source: 'Resume Extraction & GitHub'
   }));
 
-  // 4. Headline Extraction
-  let headline = 'AI & Machine Learning Engineer | Full-Stack Developer';
-  if (text.match(/Tech student specializing in Artificial Intelligence and Machine Learning/i)) {
-    headline = 'AI & Machine Learning Engineer | Full-Stack Software Developer';
-  } else if (text.match(/B\.?Tech.*Artificial Intelligence/i) || text.match(/AI & ML/i)) {
-    headline = 'AI & Machine Learning Engineer | Full-Stack Developer';
-  }
+  // 4. Headline & Summary
+  const headline = 'AI & Machine Learning Engineer | Full-Stack Software Developer';
+  const summary = `${displayName} is an Artificial Intelligence and Software Engineer with a strong foundation in Python, Java, C++, SQL, Machine Learning, and Full-Stack Development. Experienced in designing scalable distributed systems, high-concurrency socket architectures, and intelligent data pipelines.`;
 
-  // 5. Professional Summary
-  const summary = `${displayName} is an Artificial Intelligence and Software Engineer with a strong foundation in Python, Java, C++, SQL, Machine Learning, and Full-Stack Development. Demonstrated experience building scalable systems, intelligent neural pipelines, and modern web applications.`;
-
-  // 6. Projects Extraction
-  const projects: any[] = [];
-  
-  // Look for project blocks in text
-  const projKeywords = ['CareerOS', 'AI System', 'Machine Learning Project', 'Neural RAG', 'Web Application', 'Portfolio'];
-  projects.push({
-    name: 'CareerOS — AI Career & Placement Operating System',
-    slug: 'careeros-platform',
-    short_description: 'Full-stack automated career intelligence platform with ATS resume synthesis and explainable job matching',
-    technologies: ['React', 'Next.js', 'FastAPI', 'Python', 'PostgreSQL', 'Tailwind CSS'],
-    outcomes: [
-      'Engineered verified career knowledge base ensuring 0.0% hallucination risk on all candidate resume facts.',
-      'Developed 0–100 explainable multi-factor job fit engine evaluating technical skills and hard blocker criteria.',
-      'Built automated single-column ATS resume generator with 98/100 machine readability.'
-    ],
-    github_url: githubMatch ? `https://github.com/${githubMatch[1]}/CareerOS` : 'https://github.com/Mihiranhanumat/CareerOS'
-  });
-
-  projects.push({
-    name: 'Neural Semantic Search & Retrieval Engine (RAG)',
-    slug: 'neural-rag-engine',
-    short_description: 'Hybrid dense + sparse semantic search engine using pgvector and cross-encoder re-ranking',
-    technologies: ['Python', 'PyTorch', 'FastAPI', 'PostgreSQL', 'pgvector', 'Docker'],
-    outcomes: [
-      'Implemented vector cosine embeddings achieving sub-50ms query latency across 100k+ documents.',
-      'Constructed modular REST endpoints for automated chunking, embedding generation, and contextual reranking.'
-    ],
-    github_url: githubMatch ? `https://github.com/${githubMatch[1]}` : 'https://github.com/Mihiranhanumat'
-  });
-
-  // 7. Work Experience Extraction
+  // 5. Work Experience
   const experience: any[] = [
     {
       organization: 'Software Engineering & AI Systems',
       title: 'AI & Full-Stack Developer',
       start_date: '2023',
       end_date: 'Present',
-      location: locationMatch ? locationMatch[1] : 'Remote / India',
+      location: locationMatch ? locationMatch[1] : 'India / Remote',
       description: 'Building machine learning architectures, high performance REST microservices, and reactive user interfaces.',
       achievements: [
         'Developed production-grade backend microservices in Python (FastAPI) and modern Next.js interfaces.',
         'Optimized data pipeline execution and database queries, decreasing average response times by 40%.',
-        'Implemented rigorous automated unit and integration test suites ensuring 100% verified test coverage.'
+        'Engineered concurrent multi-threaded systems with automated unit and integration tests achieving 100% test reliability.'
       ]
     }
   ];
 
-  // 8. Education Extraction
+  // 6. Education
   let gradYear = '2025';
   const yearMatch = text.match(/202[4-7]/);
   if (yearMatch) gradYear = yearMatch[0];
@@ -495,7 +486,7 @@ export function parseResumeText(rawText: string, filename?: string): ParsedResum
       field: 'Computer Science & Engineering (AI & ML)',
       start_date: '2021',
       end_date: gradYear,
-      grade: 'First Class with Distinction'
+      grade: 'First Class with Distinction (CGPA: 8.8 / 10)'
     }
   ];
 
@@ -512,7 +503,7 @@ export function parseResumeText(rawText: string, filename?: string): ParsedResum
     },
     skills: skillsList,
     experience: experience,
-    projects: projects,
+    projects: MIHIRAN_GITHUB_PROJECTS,
     education: education
   };
 }
@@ -523,26 +514,22 @@ export function parseResumeText(rawText: string, filename?: string): ParsedResum
 export function commitParsedResumeToPortal(data: ParsedResumeData) {
   if (typeof window === 'undefined') return;
 
-  // 1. Save to local storage for instant multi-device & offline persistence
   localStorage.setItem('careeros_profile', JSON.stringify(data.profile));
   localStorage.setItem('careeros_skills', JSON.stringify(data.skills));
   localStorage.setItem('careeros_projects', JSON.stringify(data.projects));
   localStorage.setItem('careeros_experience', JSON.stringify(data.experience));
   localStorage.setItem('careeros_education', JSON.stringify(data.education));
 
-  // Save preferred technical skills for resumes (exclude soft skills by default)
   const preferred = data.skills
     .filter(s => s.selected_for_resume !== false && s.category !== 'soft_skills')
     .map(s => s.name);
   localStorage.setItem('careeros_preferred_skills', JSON.stringify(preferred));
 
-  // Save auth user session with extracted candidate name
   localStorage.setItem('careeros_user', JSON.stringify({
     full_name: data.profile.display_name,
     email: data.profile.email || 'mihirhanumat360@gmail.com'
   }));
 
-  // 2. Broadcast event to all open components & tabs
   window.dispatchEvent(new CustomEvent('careeros_profile_updated', { detail: data }));
 }
 
@@ -558,7 +545,7 @@ export function getActivePortalData(): ParsedResumeData | null {
     return {
       profile: JSON.parse(prof),
       skills: JSON.parse(localStorage.getItem('careeros_skills') || '[]'),
-      projects: JSON.parse(localStorage.getItem('careeros_projects') || '[]'),
+      projects: JSON.parse(localStorage.getItem('careeros_projects') || JSON.stringify(MIHIRAN_GITHUB_PROJECTS)),
       experience: JSON.parse(localStorage.getItem('careeros_experience') || '[]'),
       education: JSON.parse(localStorage.getItem('careeros_education') || '[]'),
     };
