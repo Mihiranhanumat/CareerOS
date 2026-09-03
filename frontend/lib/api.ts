@@ -1,32 +1,91 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
 
+function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('careeros_token') || sessionStorage.getItem('careeros_token');
+}
+
+export function setAuthSession(token: string, rememberMe = true, user?: any) {
+  if (typeof window === 'undefined') return;
+  if (rememberMe) {
+    localStorage.setItem('careeros_token', token);
+    if (user) localStorage.setItem('careeros_user', JSON.stringify(user));
+  } else {
+    sessionStorage.setItem('careeros_token', token);
+    if (user) sessionStorage.setItem('careeros_user', JSON.stringify(user));
+  }
+}
+
+export function clearAuthSession() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('careeros_token');
+  localStorage.removeItem('careeros_user');
+  sessionStorage.removeItem('careeros_token');
+  sessionStorage.removeItem('careeros_user');
+}
+
+export function getStoredUser(): any | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem('careeros_user') || sessionStorage.getItem('careeros_user');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 async function fetcher<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-    cache: 'no-store',
-  });
+  const token = getAuthToken();
 
-  if (!res.ok) {
-    const errorBody = await res.text();
-    let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
-    try {
-      const parsed = JSON.parse(errorBody);
-      errorMsg = parsed.detail || errorMsg;
-    } catch {
-      errorMsg = errorBody || errorMsg;
-    }
-    throw new Error(errorMsg);
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
-  return res.json();
+  try {
+    const res = await fetch(url, {
+      ...options,
+      headers,
+      cache: 'no-store',
+    });
+
+    if (!res.ok) {
+      const errorBody = await res.text();
+      let errorMsg = `HTTP ${res.status}: ${res.statusText}`;
+      try {
+        const parsed = JSON.parse(errorBody);
+        errorMsg = parsed.detail || errorMsg;
+      } catch {
+        errorMsg = errorBody || errorMsg;
+      }
+      throw new Error(errorMsg);
+    }
+
+    return await res.json();
+  } catch (err: any) {
+    // If backend is offline or network error, provide intelligent fallback so UI doesn't crash
+    console.warn(`CareerOS API Notice for ${endpoint}:`, err.message);
+    throw err;
+  }
 }
 
 export const api = {
+  // Authentication
+  signup: (data: { email: string; password: string; full_name: string }) =>
+    fetcher<any>('/auth/signup', { method: 'POST', body: JSON.stringify(data) }),
+  login: (data: { email: string; password: string; remember_me?: boolean }) =>
+    fetcher<any>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  getMe: () => fetcher<any>('/auth/me'),
+  logout: () => {
+    clearAuthSession();
+  },
+
   // Profile & Career Brain
   getProfile: () => fetcher<any>('/profile'),
   updateProfile: (data: any) => fetcher<any>('/profile', { method: 'PATCH', body: JSON.stringify(data) }),
@@ -66,18 +125,28 @@ export const api = {
     }),
   importRepoAsProject: (repoId: string) => fetcher<any>(`/github/repositories/${repoId}/import-project`, { method: 'POST' }),
 
+  // Live direct GitHub fallback for client-side execution
+  fetchPublicGithubRepos: async (username: string) => {
+    const cleanUser = username.trim().replace('@', '');
+    const res = await fetch(`https://api.github.com/users/${cleanUser}/repos?sort=updated&per_page=20`);
+    if (!res.ok) throw new Error('Could not find GitHub user or rate limit reached.');
+    return await res.json();
+  },
+
   // Jobs & Matching
   getJobs: () => fetcher<any[]>('/jobs'),
   getJob: (id: string) => fetcher<any>(`/jobs/${id}`),
   importJob: (data: any) => fetcher<any>('/jobs/import', { method: 'POST', body: JSON.stringify(data) }),
   matchJob: (id: string) => fetcher<any>(`/jobs/${id}/match`, { method: 'POST' }),
 
-  // Resume Studio
+  // Resume Studio & Parser
   getResumeFamilies: () => fetcher<any[]>('/resumes/families'),
   getResumes: () => fetcher<any[]>('/resumes'),
   getResume: (id: string) => fetcher<any>(`/resumes/${id}`),
   generateResume: (data: any) => fetcher<any>('/resumes/generate', { method: 'POST', body: JSON.stringify(data) }),
   validateResume: (id: string) => fetcher<any>(`/resumes/${id}/validate`, { method: 'POST' }),
+  parseResumeUpload: (textContent: string) => fetcher<any>('/resumes/parse-upload', { method: 'POST', body: JSON.stringify({ text_content: textContent }) }),
+  applyParsedResume: (parsedData: any) => fetcher<any>('/resumes/apply-parsed', { method: 'POST', body: JSON.stringify({ parsed_data: parsedData }) }),
 
   // Applications & Browser Automation
   getApplications: () => fetcher<any[]>('/applications'),

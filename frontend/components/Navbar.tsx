@@ -1,13 +1,29 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Sparkles, ExternalLink, ShieldCheck, Cpu, 
-  Layers, Bell, Search, PlusCircle 
+  Layers, User, LogOut, LogIn
 } from 'lucide-react';
+import { getStoredUser, clearAuthSession } from '@/lib/api';
 
 export default function Navbar() {
+  const router = useRouter();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const stored = getStoredUser();
+    setUser(stored);
+  }, []);
+
+  const handleLogout = () => {
+    clearAuthSession();
+    setUser(null);
+    router.push('/login');
+  };
+
   return (
     <header className="h-16 border-b border-slate-800/80 bg-[#0c101d]/90 backdrop-blur-md sticky top-0 z-40 px-6 flex items-center justify-between">
       <div className="flex items-center space-x-4">
@@ -31,7 +47,7 @@ export default function Navbar() {
         <Link 
           href="/alex-mercer" 
           target="_blank"
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium transition"
+          className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-medium transition"
         >
           <ExternalLink className="w-3.5 h-3.5" />
           <span>Live Public Portfolio</span>
@@ -44,6 +60,33 @@ export default function Navbar() {
           <Sparkles className="w-3.5 h-3.5" />
           <span>Update My Career</span>
         </Link>
+
+        {user ? (
+          <div className="flex items-center space-x-2 pl-2 border-l border-slate-800">
+            <div className="w-8 h-8 rounded-xl bg-indigo-600/30 border border-indigo-500/40 text-cyan-300 flex items-center justify-center font-bold text-xs">
+              {user.full_name?.slice(0, 2).toUpperCase() || 'U'}
+            </div>
+            <div className="hidden lg:block text-left">
+              <p className="text-xs font-bold text-white leading-tight">{user.full_name}</p>
+              <p className="text-[10px] text-slate-400 leading-tight truncate max-w-[120px]">{user.email}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              title="Sign Out"
+              className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-rose-400 border border-slate-800 transition"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition"
+          >
+            <LogIn className="w-3.5 h-3.5" />
+            <span>Sign In</span>
+          </Link>
+        )}
       </div>
     </header>
   );

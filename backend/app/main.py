@@ -8,7 +8,7 @@ from app.config import settings
 from app.db.session import init_db
 from app.db.seed import seed_database
 from app.routers import (
-    profile, skills, projects, experience, github, jobs,
+    auth, profile, skills, projects, experience, github, jobs,
     resumes, applications, mock_site, interview, analytics,
     public, system
 )
@@ -38,6 +38,7 @@ app.add_middleware(
 )
 
 # Register API Routers
+app.include_router(auth.router, prefix="/api")
 app.include_router(profile.router, prefix="/api")
 app.include_router(skills.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")

@@ -38,16 +38,25 @@ async def generate_tailored_resume(request: ResumeGenerateRequest, db: AsyncSess
     """
     return await resume_engine.generate_resume(db, request)
 
-@router.post("/{resume_id}/validate")
-async def validate_resume_factuality_and_ats(resume_id: str, db: AsyncSession = Depends(get_db)):
-    res = await db.execute(select(ResumeVersion).where(ResumeVersion.id == resume_id))
-    resume = res.scalars().first()
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume version not found")
+from app.services.resume_parser import resume_parser_service
+from pydantic import BaseModel
 
-    return {
-        "resume_id": resume.id,
-        "ats_report": resume.ats_report,
-        "factuality_report": resume.factuality_report,
-        "status": "VALIDATED"
-    }
+class ResumeParseRequest(BaseModel):
+    text_content: str
+
+class ResumeApplyRequest(BaseModel):
+    parsed_data: dict
+
+@router.post("/parse-upload")
+async def parse_uploaded_resume(req: ResumeParseRequest):
+    """
+    Parses resume text or document extraction into structured candidate profile data.
+    """
+    return await resume_parser_service.parse_resume_content(req.text_content)
+
+@router.post("/apply-parsed")
+async def apply_parsed_resume_to_database(req: ResumeApplyRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Commits parsed resume sections directly into verified Career Knowledge Base.
+    """
+    return await resume_parser_service.apply_parsed_resume_to_db(db, req.parsed_data)

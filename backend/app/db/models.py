@@ -11,11 +11,26 @@ Base = declarative_base()
 def generate_uuid() -> str:
     return str(uuid.uuid4())
 
+# 0. Users & Authentication
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    profiles = relationship("Profile", back_populates="user", cascade="all, delete-orphan")
+
 # 1. Profiles
 class Profile(Base):
     __tablename__ = "profiles"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     display_name = Column(String(255), nullable=False)
     headline = Column(String(255), nullable=False)
     summary = Column(Text, nullable=False)
@@ -29,6 +44,7 @@ class Profile(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    user = relationship("User", back_populates="profiles")
     visibilities = relationship("ProfileVisibility", back_populates="profile", cascade="all, delete-orphan")
 
 # 2. Profile Visibility Settings (Per-field privacy controls)
