@@ -5,13 +5,15 @@ import Link from 'next/link';
 import { 
   FileText, ShieldCheck, CheckCircle2, Download, Printer, 
   Sparkles, Layers, RefreshCw, Send, Check, Upload, Edit3, X, Save, FileCode, CheckCircle,
-  User, Mail, Phone, Github, Linkedin, MapPin, Tag, Code, Cpu, ExternalLink, GraduationCap, Briefcase
+  User, Mail, Phone, Github, Linkedin, MapPin, Tag, Code, Cpu, ExternalLink, GraduationCap, Briefcase,
+  Bot, Zap, Sliders, Plus, Trash2, ArrowUpRight, MessageSquare
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { 
   extractTextFromPdf, extractTextFromDocx, parseResumeText, 
   commitParsedResumeToPortal, getActivePortalData, ParsedResumeData, MIHIRAN_GITHUB_PROJECTS
 } from '@/lib/resumeExtractor';
+import { executeAiResumeCommand, AgentModificationResult } from '@/lib/aiResumeAgent';
 import ATSValidatorModal from '@/components/ATSValidatorModal';
 
 export default function ResumeStudioPage() {
@@ -32,6 +34,10 @@ export default function ResumeStudioPage() {
   const [auditModalOpen, setAuditModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // AI Co-Pilot Agent State
+  const [agentFeedback, setAgentFeedback] = useState<string | null>(null);
+  const [agentLogs, setAgentLogs] = useState<string[]>([]);
+
   // Resume Upload & Parser State
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [resumeText, setResumeText] = useState('');
@@ -41,6 +47,10 @@ export default function ResumeStudioPage() {
   const [parsedResult, setParsedResult] = useState<ParsedResumeData | null>(null);
   const [applying, setApplying] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+
+  // New Custom Role Modal
+  const [newRoleModalOpen, setNewRoleModalOpen] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
 
   // Edit Mode State
   const [isEditing, setIsEditing] = useState(false);
@@ -73,7 +83,7 @@ export default function ResumeStudioPage() {
         await handleGenerate('ai-ml', '', portalData);
       }
     } catch (err) {
-      console.warn('Generating local tailored resume:', err);
+      console.warn('Generating tailored resume:', err);
       await handleGenerate('ai-ml', '', portalData);
     } finally {
       setLoading(false);
@@ -96,13 +106,12 @@ export default function ResumeStudioPage() {
       linkedin_url: 'https://linkedin.com/in/mihiran'
     };
 
-    // Role-specific headline & summary adaptation
     let roleHeadline = 'AI & Machine Learning Engineer | Full-Stack Developer';
     let roleSummary = `${p.display_name} is an Artificial Intelligence and Software Engineer specializing in machine learning pipelines, predictive modeling, and scalable full-stack applications. Demonstrated ability to architect end-to-end intelligent systems with robust backend APIs.`;
 
     if (slug === 'backend') {
       roleHeadline = 'Backend & Distributed Systems Engineer';
-      roleSummary = `${p.display_name} is a software developer specializing in backend architectures, concurrent multi-threaded systems in Java, asynchronous Python microservices (FastAPI), and SQL optimization. Experienced in designing low-latency TCP socket engines and secure transaction ledgers.`;
+      roleSummary = `${p.display_name} is a software developer specializing in backend architectures, concurrent multi-threaded systems in Java, asynchronous Python microservices (FastAPI), and SQL query optimization. Experienced in designing low-latency TCP socket engines and secure transaction ledgers.`;
     } else if (slug === 'swe') {
       roleHeadline = 'Software Development Engineer (SWE)';
       roleSummary = `${p.display_name} is a software engineer with strong problem-solving skills in Data Structures & Algorithms, Object-Oriented Programming (Java, C++, Python), and full-stack software development. Proven track record of open-sourcing production-grade systems on GitHub.`;
@@ -114,7 +123,6 @@ export default function ResumeStudioPage() {
       roleSummary = `${p.display_name} is an AI researcher and engineer with expertise in Natural Language Processing, classification models, vector embeddings, and genomic data science using PyTorch, Scikit-Learn, and Pandas.`;
     }
 
-    // Role-specific projects selection from Mihiran's actual GitHub repos
     const allProjects = portalData?.projects && portalData.projects.length > 0 ? portalData.projects : MIHIRAN_GITHUB_PROJECTS;
     let selectedProjects = allProjects;
 
@@ -136,7 +144,6 @@ export default function ResumeStudioPage() {
 
     if (selectedProjects.length === 0) selectedProjects = allProjects.slice(0, 3);
 
-    // Skills Categorization
     const allSkills = portalData?.skills || [
       { name: 'Python', category: 'languages' },
       { name: 'Java', category: 'languages' },
@@ -161,8 +168,7 @@ export default function ResumeStudioPage() {
       { name: 'Data Structures & Algorithms', category: 'core' },
       { name: 'OOP', category: 'core' },
       { name: 'DBMS', category: 'core' },
-      { name: 'Operating Systems', category: 'core' },
-      { name: 'Problem Solving', category: 'soft_skills' }
+      { name: 'Operating Systems', category: 'core' }
     ];
 
     const techLanguages = allSkills.filter((s: any) => s.category === 'languages').map((s: any) => s.name);
@@ -179,48 +185,58 @@ export default function ResumeStudioPage() {
       'Core Computer Science': techCore.length > 0 ? techCore : ['Data Structures & Algorithms (DSA)', 'OOP', 'DBMS', 'Operating Systems (OS)']
     };
 
+    let baseContent = {
+      header: {
+        name: p.display_name,
+        headline: roleHeadline,
+        location: p.location,
+        email: p.email,
+        phone: p.phone,
+        github: p.github_url?.replace('https://', '') || 'github.com/Mihiranhanumat',
+        linkedin: p.linkedin_url?.replace('https://', '') || 'linkedin.com/in/mihiran'
+      },
+      education: portalData?.education?.[0] || {
+        institution: 'Bachelor of Technology (B.Tech)',
+        degree: 'B.Tech in Artificial Intelligence & Machine Learning / Computer Science',
+        year: '2021 — 2025',
+        grade: 'CGPA: 8.8 / 10'
+      },
+      summary: roleSummary,
+      skills: skillsStructure,
+      projects: selectedProjects,
+      experience: portalData?.experience || [
+        {
+          organization: 'Software Engineering & Open-Source Development',
+          title: 'AI & Full-Stack Developer',
+          dates: '2023 — Present',
+          bullets: [
+            'Designed and open-sourced production-ready AI and distributed system architectures on GitHub (11+ active repos).',
+            'Developed asynchronous backend REST APIs in Python (FastAPI) and reactive Next.js web applications.',
+            'Engineered concurrent multi-threaded TCP socket servers in Java with thread pooling and non-blocking I/O.'
+          ]
+        }
+      ],
+      highlights: [
+        'Solved 300+ Data Structures & Algorithms problems across competitive programming platforms.',
+        'Active GitHub open-source developer maintaining production repositories in AI, Systems, and Full-Stack.'
+      ]
+    };
+
+    // If an AI custom command was provided, let the Agent execute it!
+    if (instruction && instruction.trim()) {
+      const agentResult = executeAiResumeCommand(baseContent, instruction, slug);
+      baseContent = agentResult.updatedContent;
+      setAgentFeedback(agentResult.explanation);
+      setAgentLogs(prev => [agentResult.explanation, ...prev]);
+    }
+
     const fallback = {
       id: `res-${Date.now()}`,
       family_id: slug,
       version_name: `${p.display_name.replace(/\s+/g, '_')}_${slug.toUpperCase()}_v1`,
       ats_report: { ats_score: 98, single_column: true, standard_sections: true },
       factuality_report: { hallucination_risk: '0.0%', status: 'PASSED_EVIDENCE_GATE' },
-      content_json: {
-        header: {
-          name: p.display_name,
-          headline: roleHeadline,
-          location: p.location,
-          email: p.email,
-          phone: p.phone,
-          github: p.github_url?.replace('https://', '') || 'github.com/Mihiranhanumat',
-          linkedin: p.linkedin_url?.replace('https://', '') || 'linkedin.com/in/mihiran'
-        },
-        education: portalData?.education?.[0] || {
-          institution: 'Bachelor of Technology (B.Tech)',
-          degree: 'B.Tech in Artificial Intelligence & Machine Learning / Computer Science',
-          year: '2021 — 2025',
-          grade: 'CGPA: 8.8 / 10'
-        },
-        summary: roleSummary,
-        skills: skillsStructure,
-        projects: selectedProjects,
-        experience: portalData?.experience || [
-          {
-            organization: 'Software Engineering & Open-Source Development',
-            title: 'AI & Full-Stack Developer',
-            dates: '2023 — Present',
-            bullets: [
-              'Designed and open-sourced production-ready AI and distributed system architectures on GitHub (11+ active repos).',
-              'Developed asynchronous backend REST APIs in Python (FastAPI) and reactive Next.js web applications.',
-              'Engineered concurrent multi-threaded TCP socket servers in Java with thread pooling and non-blocking I/O.'
-            ]
-          }
-        ],
-        highlights: [
-          'Solved 300+ Data Structures & Algorithms problems across competitive programming platforms.',
-          'Active GitHub open-source developer maintaining production repositories in AI, Systems, and Full-Stack.'
-        ]
-      }
+      content_json: baseContent
     };
 
     setSelectedResume(fallback);
@@ -228,6 +244,34 @@ export default function ResumeStudioPage() {
     setResumes(prev => [fallback, ...prev]);
     setCustomCommand('');
     setGenerating(false);
+  };
+
+  const handleAiCommandSubmit = (commandText: string) => {
+    if (!commandText.trim()) return;
+    setGenerating(true);
+    const active = isEditing ? editableContent : (selectedResume?.content_json || {});
+    const agentResult = executeAiResumeCommand(active, commandText, selectedFamilySlug);
+    
+    setEditableContent(agentResult.updatedContent);
+    setSelectedResume({
+      ...selectedResume,
+      content_json: agentResult.updatedContent
+    });
+    setAgentFeedback(agentResult.explanation);
+    setAgentLogs(prev => [agentResult.explanation, ...prev]);
+    setCustomCommand('');
+    setGenerating(false);
+  };
+
+  const handleAddNewRoleFamily = () => {
+    if (!newRoleName.trim()) return;
+    const slug = newRoleName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    const newFam = { name: newRoleName.trim(), slug };
+    setFamilies([...families, newFam]);
+    setSelectedFamilySlug(slug);
+    setNewRoleModalOpen(false);
+    setNewRoleName('');
+    handleGenerate(slug, `Create optimized resume for target role: ${newRoleName}`);
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -324,13 +368,13 @@ export default function ResumeStudioPage() {
         <div>
           <div className="flex items-center space-x-2">
             <span className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              <FileText className="w-4 h-4" />
+              <Bot className="w-4 h-4" />
             </span>
-            <span className="text-xs uppercase font-bold tracking-widest text-emerald-400">Career Asset Engine</span>
+            <span className="text-xs uppercase font-bold tracking-widest text-emerald-400">Autonomous Resume & Career Co-Pilot</span>
           </div>
-          <h1 className="text-2xl font-bold text-white mt-1">Resume Studio & ATS Engine</h1>
+          <h1 className="text-2xl font-bold text-white mt-1">Resume Studio & AI Agent</h1>
           <p className="text-xs text-slate-400">
-            Synthesizes role-tailored ATS resumes backed by your verified GitHub projects and career facts.
+            Tell the AI agent anything you want to edit, customize, reorder, or add — it executes your instructions in real-time.
           </p>
         </div>
 
@@ -352,7 +396,7 @@ export default function ResumeStudioPage() {
             }`}
           >
             <Edit3 className="w-4 h-4" />
-            <span>{isEditing ? 'Preview Mode' : 'Edit Content'}</span>
+            <span>{isEditing ? 'View ATS Sheet' : 'Direct Edit Fields'}</span>
           </button>
 
           <button
@@ -373,11 +417,21 @@ export default function ResumeStudioPage() {
         </div>
       </div>
 
-      {/* 7 RESUME FAMILIES SELECTOR */}
+      {/* 7 RESUME FAMILIES SELECTOR + ADD NEW ROLE BUTTON */}
       <div className="space-y-2 no-print">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-          Target Role Profile (Click to Auto-Tailor Skills & Projects)
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            Target Role Profile (Select or Add New)
+          </span>
+          <button
+            onClick={() => setNewRoleModalOpen(true)}
+            className="text-xs text-indigo-400 hover:text-cyan-300 flex items-center space-x-1 font-semibold transition"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>+ Add Custom Target Role</span>
+          </button>
+        </div>
+
         <div className="flex flex-wrap gap-2">
           {families.map((fam) => {
             const isSelected = selectedFamilySlug === fam.slug;
@@ -401,188 +455,322 @@ export default function ResumeStudioPage() {
         </div>
       </div>
 
-      {/* NATURAL LANGUAGE REFINEMENT COMMAND BAR */}
-      <div className="p-4 rounded-2xl bg-surface border border-slate-700/80 no-print">
+      {/* AI RESUME CO-PILOT AGENT COMMAND TERMINAL */}
+      <div className="p-5 rounded-3xl bg-gradient-to-r from-[#111728] via-[#0e1627] to-[#121c30] border border-indigo-500/40 shadow-xl space-y-4 no-print">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="p-1 rounded-lg bg-indigo-500/30 text-cyan-300">
+              <Bot className="w-4 h-4" />
+            </span>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-cyan-300">AI Resume Co-Pilot Agent</h3>
+          </div>
+          <span className="text-[11px] text-slate-400">Natural-Language Autonomous Editor</span>
+        </div>
+
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            handleGenerate(selectedFamilySlug, customCommand);
+            handleAiCommandSubmit(customCommand);
           }}
           className="flex items-center gap-3"
         >
           <Sparkles className="w-5 h-5 text-cyan-400 flex-shrink-0" />
           <input
             type="text"
-            placeholder="Refine resume: 'Highlight Concurrent Socket Chat Engine', 'Prioritize Python & Machine Learning'..."
+            placeholder="Instruct the agent: 'Highlight Concurrent Socket Chat Engine', 'Quantify metrics with %', 'Make it strictly 1 page'..."
             value={customCommand}
             onChange={(e) => setCustomCommand(e.target.value)}
-            className="flex-1 px-4 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white focus:outline-none focus:border-cyan-500"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-slate-900/90 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-medium"
           />
           <button
             type="submit"
-            disabled={generating}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition flex items-center space-x-1.5 disabled:opacity-50"
+            disabled={generating || !customCommand.trim()}
+            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white text-xs font-bold transition flex items-center space-x-1.5 disabled:opacity-50 shadow-glow-indigo"
           >
             {generating ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Tailoring...</span>
+                <span>Executing...</span>
               </>
             ) : (
               <>
                 <Send className="w-3.5 h-3.5" />
-                <span>Refine</span>
+                <span>Execute</span>
               </>
             )}
           </button>
         </form>
-      </div>
 
-      {/* ATS CLEAN SHEET - FORMATTED EXACTLY TO CANDIDATE RESUME LAYOUT */}
-      <div className="bg-white text-slate-900 rounded-2xl p-8 md:p-12 shadow-2xl max-w-4xl mx-auto space-y-4 font-sans text-sm leading-relaxed ats-print-container border border-slate-200">
-        {/* RESUME HEADER */}
-        <div className="text-center space-y-0.5 border-b border-slate-400 pb-2.5">
-          <h1 className="text-2xl font-extrabold uppercase tracking-tight text-slate-900">
-            {header.name || 'MIHIRAN HANUMAT'}
-          </h1>
-          <p className="text-xs font-bold text-slate-700">
-            {header.headline || 'AI & Machine Learning Engineer | Full-Stack Software Developer'}
-          </p>
-          <div className="flex flex-wrap justify-center items-center gap-2.5 text-xs text-slate-700 pt-0.5">
-            {header.phone && <span>{header.phone}</span>}
-            {header.email && (
-              <>
-                <span>|</span>
-                <a href={`mailto:${header.email}`} className="text-slate-800 hover:underline">{header.email}</a>
-              </>
-            )}
-            {header.linkedin && (
-              <>
-                <span>|</span>
-                <a href={`https://${header.linkedin}`} target="_blank" rel="noreferrer" className="text-slate-800 font-mono hover:underline">{header.linkedin}</a>
-              </>
-            )}
-            {header.github && (
-              <>
-                <span>|</span>
-                <a href={`https://${header.github}`} target="_blank" rel="noreferrer" className="text-slate-800 font-mono hover:underline">{header.github}</a>
-              </>
-            )}
-          </div>
+        {/* QUICK AGENT PRESETS / CHIPS */}
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {[
+            'Make it strictly 1 page compact',
+            'Highlight Concurrent Socket Chat Engine (Java)',
+            'Feature Pharmacogenomic Risk Detection AI',
+            'Quantify all bullet points with metrics',
+            'Target Quantitative / High-Frequency Systems',
+            'Add Docker & Kubernetes to tools'
+          ].map((chip, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleAiCommandSubmit(chip)}
+              className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-cyan-300 border border-slate-800 text-[11px] font-medium transition flex items-center space-x-1"
+            >
+              <Zap className="w-3 h-3 text-amber-400" />
+              <span>{chip}</span>
+            </button>
+          ))}
         </div>
 
-        {/* EDUCATION */}
-        {content?.education && (
-          <div className="space-y-1">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
-              Education
-            </h2>
-            <div className="flex justify-between text-xs text-slate-800 pt-0.5">
-              <div>
-                <span className="font-bold text-slate-900">{content.education.institution}</span>
-                <p className="text-slate-700">{content.education.degree}</p>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-700 font-semibold">{content.education.year || content.education.end_date}</span>
-                <p className="text-slate-700 font-medium">{content.education.grade}</p>
-              </div>
-            </div>
+        {/* AGENT FEEDBACK LOG */}
+        {agentFeedback && (
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center space-x-2">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+            <span>{agentFeedback}</span>
           </div>
         )}
+      </div>
 
-        {/* TECHNICAL SKILLS */}
-        {content?.skills && (
-          <div className="space-y-1">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
-              Technical Skills
+      {/* DIRECT INLINE EDITING MODE OR ATS PREVIEW */}
+      {isEditing ? (
+        <div className="p-6 md:p-8 rounded-3xl bg-surface border border-slate-700 space-y-6 text-xs no-print">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 className="text-base font-bold text-white flex items-center space-x-2">
+              <Sliders className="w-4 h-4 text-indigo-400" />
+              <span>Direct Resume Field Editor</span>
             </h2>
-            <div className="space-y-0.5 text-xs text-slate-800 pt-0.5">
-              {Object.entries(content.skills).map(([category, items]: any, idx) => {
-                const list = Array.isArray(items) ? items : [String(items)];
-                if (list.length === 0) return null;
-                return (
-                  <div key={idx}>
-                    <strong className="text-slate-900">{category}:</strong> {list.join(', ')}
-                  </div>
-                );
-              })}
+            <button
+              onClick={() => setIsEditing(false)}
+              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition"
+            >
+              Done & View ATS Sheet
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-400">Candidate Name</label>
+              <input
+                type="text"
+                value={editableContent.header?.name || ''}
+                onChange={(e) => setEditableContent({
+                  ...editableContent,
+                  header: { ...editableContent.header, name: e.target.value }
+                })}
+                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white font-bold"
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-400">Headline / Role</label>
+              <input
+                type="text"
+                value={editableContent.header?.headline || ''}
+                onChange={(e) => setEditableContent({
+                  ...editableContent,
+                  header: { ...editableContent.header, headline: e.target.value }
+                })}
+                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white"
+              />
+            </div>
+
+            <div className="col-span-2">
+              <label className="text-[10px] font-bold uppercase text-slate-400">Professional Summary</label>
+              <textarea
+                rows={3}
+                value={editableContent.summary || ''}
+                onChange={(e) => setEditableContent({
+                  ...editableContent,
+                  summary: e.target.value
+                })}
+                className="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-white leading-relaxed"
+              />
             </div>
           </div>
-        )}
+        </div>
+      ) : (
+        /* ATS CLEAN SHEET - FORMATTED EXACTLY TO CANDIDATE RESUME LAYOUT */
+        <div className="bg-white text-slate-900 rounded-2xl p-8 md:p-12 shadow-2xl max-w-4xl mx-auto space-y-4 font-sans text-sm leading-relaxed ats-print-container border border-slate-200">
+          {/* RESUME HEADER */}
+          <div className="text-center space-y-0.5 border-b border-slate-400 pb-2.5">
+            <h1 className="text-2xl font-extrabold uppercase tracking-tight text-slate-900">
+              {header.name || 'MIHIRAN HANUMAT'}
+            </h1>
+            <p className="text-xs font-bold text-slate-700">
+              {header.headline || 'AI & Machine Learning Engineer | Full-Stack Software Developer'}
+            </p>
+            <div className="flex flex-wrap justify-center items-center gap-2.5 text-xs text-slate-700 pt-0.5">
+              {header.phone && <span>{header.phone}</span>}
+              {header.email && (
+                <>
+                  <span>|</span>
+                  <a href={`mailto:${header.email}`} className="text-slate-800 hover:underline">{header.email}</a>
+                </>
+              )}
+              {header.linkedin && (
+                <>
+                  <span>|</span>
+                  <a href={`https://${header.linkedin}`} target="_blank" rel="noreferrer" className="text-slate-800 font-mono hover:underline">{header.linkedin}</a>
+                </>
+              )}
+              {header.github && (
+                <>
+                  <span>|</span>
+                  <a href={`https://${header.github}`} target="_blank" rel="noreferrer" className="text-slate-800 font-mono hover:underline">{header.github}</a>
+                </>
+              )}
+            </div>
+          </div>
 
-        {/* KEY ENGINEERING PROJECTS (WITH GITHUB REPOS) */}
-        {content?.projects?.length > 0 && (
-          <div className="space-y-1.5">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
-              Key Engineering Projects
-            </h2>
-            <div className="space-y-2.5 pt-0.5">
-              {content.projects.map((proj: any, idx: number) => {
-                const stackStr = Array.isArray(proj.technologies) ? proj.technologies.join(', ') : (proj.stack || '');
-                const bulletList = proj.outcomes || proj.bullets || [proj.short_description];
-                const ghUrl = proj.github_url || `https://github.com/Mihiranhanumat/${proj.slug || ''}`;
+          {/* EDUCATION */}
+          {content?.education && (
+            <div className="space-y-1">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
+                Education
+              </h2>
+              <div className="flex justify-between text-xs text-slate-800 pt-0.5">
+                <div>
+                  <span className="font-bold text-slate-900">{content.education.institution}</span>
+                  <p className="text-slate-700">{content.education.degree}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-700 font-semibold">{content.education.year || content.education.end_date}</span>
+                  <p className="text-slate-700 font-medium">{content.education.grade}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
-                return (
-                  <div key={idx} className="space-y-0.5">
-                    <div className="flex justify-between items-baseline text-xs font-bold text-slate-900">
-                      <div>
-                        <span>{proj.name}</span>
-                        {stackStr && <span className="font-normal text-slate-600 font-mono text-[11px]"> | <em>{stackStr}</em></span>}
+          {/* TECHNICAL SKILLS */}
+          {content?.skills && (
+            <div className="space-y-1">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
+                Technical Skills
+              </h2>
+              <div className="space-y-0.5 text-xs text-slate-800 pt-0.5">
+                {Object.entries(content.skills).map(([category, items]: any, idx) => {
+                  const list = Array.isArray(items) ? items : [String(items)];
+                  if (list.length === 0) return null;
+                  return (
+                    <div key={idx}>
+                      <strong className="text-slate-900">{category}:</strong> {list.join(', ')}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* KEY ENGINEERING PROJECTS (WITH GITHUB REPOS) */}
+          {content?.projects?.length > 0 && (
+            <div className="space-y-1.5">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
+                Key Engineering Projects
+              </h2>
+              <div className="space-y-2.5 pt-0.5">
+                {content.projects.map((proj: any, idx: number) => {
+                  const stackStr = Array.isArray(proj.technologies) ? proj.technologies.join(', ') : (proj.stack || '');
+                  const bulletList = proj.outcomes || proj.bullets || [proj.short_description];
+                  const ghUrl = proj.github_url || `https://github.com/Mihiranhanumat/${proj.slug || ''}`;
+
+                  return (
+                    <div key={idx} className="space-y-0.5">
+                      <div className="flex justify-between items-baseline text-xs font-bold text-slate-900">
+                        <div>
+                          <span>{proj.name}</span>
+                          {stackStr && <span className="font-normal text-slate-600 font-mono text-[11px]"> | <em>{stackStr}</em></span>}
+                        </div>
+                        <a href={ghUrl} target="_blank" rel="noreferrer" className="text-slate-700 font-mono text-[10px] hover:underline flex-shrink-0 ml-2">
+                          [GitHub]
+                        </a>
                       </div>
-                      <a href={ghUrl} target="_blank" rel="noreferrer" className="text-slate-700 font-mono text-[10px] hover:underline flex-shrink-0 ml-2">
-                        [GitHub]
-                      </a>
+                      <ul className="list-disc list-outside ml-4 space-y-0.5 text-xs text-slate-800">
+                        {bulletList.map((b: string, bIdx: number) => (
+                          <li key={bIdx}>{b}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* EXPERIENCE / OPEN SOURCE */}
+          {content?.experience?.length > 0 && (
+            <div className="space-y-1.5">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
+                Experience & Open Source Contributions
+              </h2>
+              <div className="space-y-2.5 pt-0.5">
+                {content.experience.map((exp: any, idx: number) => (
+                  <div key={idx} className="space-y-0.5">
+                    <div className="flex justify-between text-xs font-bold text-slate-900">
+                      <span>{exp.title} — {exp.organization}</span>
+                      <span className="font-normal text-slate-600">{exp.dates || `${exp.start_date} — ${exp.end_date}`}</span>
                     </div>
                     <ul className="list-disc list-outside ml-4 space-y-0.5 text-xs text-slate-800">
-                      {bulletList.map((b: string, bIdx: number) => (
+                      {(exp.bullets || exp.achievements || []).map((b: string, bIdx: number) => (
                         <li key={bIdx}>{b}</li>
                       ))}
                     </ul>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* EXPERIENCE / OPEN SOURCE */}
-        {content?.experience?.length > 0 && (
-          <div className="space-y-1.5">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
-              Experience & Open Source Contributions
-            </h2>
-            <div className="space-y-2.5 pt-0.5">
-              {content.experience.map((exp: any, idx: number) => (
-                <div key={idx} className="space-y-0.5">
-                  <div className="flex justify-between text-xs font-bold text-slate-900">
-                    <span>{exp.title} — {exp.organization}</span>
-                    <span className="font-normal text-slate-600">{exp.dates || `${exp.start_date} — ${exp.end_date}`}</span>
-                  </div>
-                  <ul className="list-disc list-outside ml-4 space-y-0.5 text-xs text-slate-800">
-                    {(exp.bullets || exp.achievements || []).map((b: string, bIdx: number) => (
-                      <li key={bIdx}>{b}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+          {/* HIGHLIGHTS / ACHIEVEMENTS */}
+          {content?.highlights?.length > 0 && (
+            <div className="space-y-1">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
+                Key Highlights & Achievements
+              </h2>
+              <ul className="list-disc list-outside ml-4 space-y-0.5 text-xs text-slate-800 pt-0.5">
+                {content.highlights.map((h: string, idx: number) => (
+                  <li key={idx}>{h}</li>
+                ))}
+              </ul>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
-        {/* HIGHLIGHTS / ACHIEVEMENTS */}
-        {content?.highlights?.length > 0 && (
-          <div className="space-y-1">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 border-b border-slate-300 pb-0.5">
-              Key Highlights & Achievements
-            </h2>
-            <ul className="list-disc list-outside ml-4 space-y-0.5 text-xs text-slate-800 pt-0.5">
-              {content.highlights.map((h: string, idx: number) => (
-                <li key={idx}>{h}</li>
-              ))}
-            </ul>
+      {/* CREATE NEW CUSTOM ROLE FAMILY MODAL */}
+      {newRoleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in no-print">
+          <div className="w-full max-w-md bg-surface border border-slate-700 rounded-3xl p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-white flex items-center space-x-2">
+                <Plus className="w-4 h-4 text-indigo-400" />
+                <span>Add Custom Target Role</span>
+              </h3>
+              <button onClick={() => setNewRoleModalOpen(false)} className="p-1 text-slate-400 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-300">Role Title (e.g. Quantitative Developer, Blockchain Architect)</label>
+              <input
+                type="text"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+                placeholder="Enter role title..."
+                className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white"
+              />
+            </div>
+
+            <button
+              onClick={handleAddNewRoleFamily}
+              disabled={!newRoleName.trim()}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition disabled:opacity-50"
+            >
+              Create Role & Auto-Tailor Resume
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* INTERACTIVE RESUME UPLOAD & REVIEW MODAL */}
       {uploadModalOpen && (
@@ -630,7 +818,6 @@ export default function ResumeStudioPage() {
                   <span>{parsedResult.skills?.length || 0} Skills & {parsedResult.projects?.length || 0} Projects</span>
                 </div>
 
-                {/* Candidate Contact Inputs */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] font-bold uppercase text-slate-400">Full Name</label>
@@ -711,7 +898,6 @@ export default function ResumeStudioPage() {
                   </div>
                 </div>
 
-                {/* GitHub Projects Preview */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase text-slate-400">
                     GitHub & Verified Projects Included
