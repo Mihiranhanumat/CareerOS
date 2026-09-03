@@ -8,6 +8,7 @@ import {
   PlayCircle, Clock, Check, ExternalLink, Cpu, User, MapPin, Mail, Upload, Briefcase
 } from 'lucide-react';
 import { api, getStoredUser } from '@/lib/api';
+import { getActivePortalData } from '@/lib/resumeExtractor';
 import ScoreBadge from '@/components/ScoreBadge';
 
 export default function DashboardPage() {
@@ -20,10 +21,19 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    async function loadData() {
+    function refreshData() {
+      const portal = getActivePortalData();
+      if (portal?.profile) {
+        setProfile(portal.profile);
+      }
       const stored = getStoredUser();
       if (stored) setUser(stored);
+    }
 
+    refreshData();
+    window.addEventListener('careeros_profile_updated', refreshData);
+
+    async function loadData() {
       try {
         const [profData, jobsData, appsData, analyticsData, healthData] = await Promise.all([
           api.getProfile().catch(() => null),
@@ -32,7 +42,7 @@ export default function DashboardPage() {
           api.getAnalytics().catch(() => null),
           api.getSystemHealth().catch(() => null),
         ]);
-        setProfile(profData);
+        if (profData) setProfile(profData);
         setJobs(jobsData || []);
         setApplications(appsData || []);
         setAnalytics(analyticsData);
@@ -44,6 +54,8 @@ export default function DashboardPage() {
       }
     }
     loadData();
+
+    return () => window.removeEventListener('careeros_profile_updated', refreshData);
   }, []);
 
   if (loading) {
@@ -56,10 +68,11 @@ export default function DashboardPage() {
   }
 
   const awaitingApprovalApps = (applications || []).filter(a => a.status === 'AWAITING_APPROVAL' || a.status === 'WAITING_FOR_USER');
-  const candidateName = user?.full_name || profile?.display_name || 'Alex Mercer';
-  const candidateEmail = user?.email || profile?.email_public || 'alex.mercer.eng@gmail.com';
-  const candidateHeadline = profile?.headline || 'Senior Backend & AI Systems Engineer';
-  const candidateLocation = profile?.location || 'San Francisco, CA / Remote';
+  const portalData = getActivePortalData();
+  const candidateName = user?.full_name || profile?.display_name || portalData?.profile?.display_name || 'Mihiran Hanumat';
+  const candidateEmail = user?.email || profile?.email_public || profile?.email || portalData?.profile?.email || 'mihirhanumat360@gmail.com';
+  const candidateHeadline = profile?.headline || portalData?.profile?.headline || 'AI & Machine Learning Engineer | Full-Stack Software Developer';
+  const candidateLocation = profile?.location || portalData?.profile?.location || 'India / Remote';
 
   return (
     <div className="space-y-8 animate-in fade-in max-w-6xl mx-auto">
