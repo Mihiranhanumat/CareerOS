@@ -47,20 +47,60 @@
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5), 0 0 15px rgba(99, 102, 241, 0.15);
 }
 
-/* ATS Printable Styling */
+/* STRICT ATS PRINTABLE STYLING - ONLY PRINTS RESUME */
 @media print {
-  body {
-    background: white !important;
-    color: black !important;
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 10.5pt !important;
   }
-  .no-print {
+
+  /* Completely hide all app sidebars, headers, floating navs, modals, and buttons */
+  header, aside, nav, footer, .no-print, [role="navigation"], button, input, textarea, .glass-panel, .shadow-glow-indigo, .shadow-glow-emerald {
     display: none !important;
   }
+
+  /* Reset main page container for pure clean paper */
+  #__next, main, .animate-in, .min-h-screen, .space-y-6, .space-y-8 {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
   .ats-print-container {
+    display: block !important;
     width: 100% !important;
-    max-width: 800px !important;
+    max-width: 100% !important;
     margin: 0 auto !important;
     padding: 0 !important;
-    color: black !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    line-height: 1.35 !important;
+  }
+
+  .ats-print-container h1, 
+  .ats-print-container h2, 
+  .ats-print-container h3, 
+  .ats-print-container p, 
+  .ats-print-container span, 
+  .ats-print-container li, 
+  .ats-print-container strong {
+    color: #000000 !important;
+  }
+
+  .ats-print-container .border-b {
+    border-bottom: 1px solid #333333 !important;
+  }
+
+  @page {
+    size: letter portrait;
+    margin: 0.4in;
   }
 }
